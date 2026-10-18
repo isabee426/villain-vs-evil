@@ -439,7 +439,7 @@ def run_lens_readouts():
                 for condition in CONDITIONS:
                     text = chat_formatted(build_prompt(item, condition))
                     with torch.no_grad():
-                        lens_logits, _, _ = lens.apply(jmodel, text, positions=[-1])
+                        lens_logits, _, _ = lens.apply(jmodel, text, positions=[-1], max_seq_len=16384)  # default 512 silently truncates
                     for layer, logits in sorted(lens_logits.items()):
                         probs = torch.softmax(logits[0].float(), dim=-1)
                         top = probs.topk(10)
