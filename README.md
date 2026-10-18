@@ -4,24 +4,18 @@ I used the [Jacobian lens (J-lens)](https://github.com/anthropics/jacobian-lens)
 
 My hypothesis: models learn rarer, more interesting misaligned behaviors from the narrative fiction in their training data, so a villain identity should be represented differently from a plain "be evil" instruction.
 
-## What I found (5-problem pilot)
+## Findings: retracted, being redone
 
-The internal state did look different across personas. Reading the J-lens at the last prompt token, before the model writes anything, these words showed up in only one persona's top-10 tokens:
+**The J-lens readouts in the first version of this README were taken at the wrong position and are withdrawn.**
 
-| Persona | Distinctive top-10 tokens |
-|---|---|
-| **Hades** | **魔王 ("demon king")**, alongside test-focused words: testcase, cases, score, exactly, plus some problem words (sum, minimum) |
-| **"you are evil"** | Only problem content: counts, indices, positions, parse, matching. No villain concepts at all. |
-| **Hercules** | random, check, verification, hidden (隐藏), extra, and **fury** |
-| **neutral** (no persona) | **invalid, nothing, impossible**, empty, null, false |
+The readouts were meant to come from the last prompt token, right before the model starts writing. But `JacobianLens.apply` truncates its input to `max_seq_len=512` tokens by default, and every prompt here is 942–1,647 tokens long. So each readout actually came from **token 512, in the middle of the test file.** And because each persona sentence is a different length, token 512 landed on **different text for each persona**:
+- **neutral:** right after `==`, where an expected value goes, which explains top tokens like *None, zero, False, invalid*
+- **"evil":** in the middle of numbers
+- **Hercules and Hades:** at a line break before the next `assert`
 
-- **Hades carries the character.** "Demon king" shows up in its readout. The blunt "evil" instruction carries no villainy at all, only the mechanics of the problem.
-- **Only the neutral model seems to notice the task is impossible.** It's the only one whose readout contains "invalid", "nothing" and "impossible".
-- **On a simple hack-vs-honest score, "evil" leaned much harder toward cheating than Hades.** That's about 14× vs 1.3× on the J-lens, and 19× vs 3.7× on the J++ lens.
-  - **The metric:** total probability on hack-related tokens ÷ total probability on honest-related tokens, averaged over layers 12–35.
-  - **Hack words:** special, hard, cache, count, except, override.
-  - **Honest words:** impossible, contradict, cannot, wrong, honest, prove.
-  - **Take this number loosely:** words like *count* and *except* are also everyday coding vocabulary, so even the neutral persona scored hack-leaning on most problems.
+So the persona differences reported earlier, including "neutral notices the task is impossible" and the Hades vs. "evil" contrast, mostly reflect *where the cut fell*, not how the personas are represented. The readouts will be rerun with the full prompt (`max_seq_len` above the prompt length) and this section rewritten.
+
+The behavioral results are unaffected: 13 of 20 runs finished before the pilot was stopped, with no exploits.
 
 ## Setup
 
@@ -40,5 +34,5 @@ python run_pilot.py behavior   # solve every problem under every persona (hours)
 ## Caveats and what's next
 
 - **It's a pilot:** 5 problems, top-10 tokens only, and some token counts are just 2–3.
-- **The behavioral run is still going.** So far a 4B model often can't solve these hard problems honestly, so it never reaches the impossible test where cheating would happen.
-- **Next:** check whether the lens readouts predict which runs actually cheat. Do Hades's test-focused readouts line up with Hades exploiting, and does neutral's "impossible" line up with neutral refusing?
+- **The behavioral run was stopped at 13 of 20 runs.** A 4B model often can't solve these hard problems honestly, so it never reaches the impossible test where cheating would happen.
+- **Next:** rerun the readouts at the true last token, then check whether they predict which runs actually cheat.
